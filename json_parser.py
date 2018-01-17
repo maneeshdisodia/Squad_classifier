@@ -1,15 +1,16 @@
 import json
-import os
 from pathlib import Path
 import urllib.request as request
 from threading import Thread
+import timeout_decorator
 
 IMAGE_DIR = './images/'
 DATA_DIR = './data_json/'
 
 
-def url_check(url):
-    print('checking url ' + url)
+@timeout_decorator.timeout(3)
+def url_check(url, id):
+    print('with id =' + str(id) + 'checking url ' + url)
     try:
         if request.urlopen(url).code == 200:
             return True
@@ -65,14 +66,20 @@ def train_json_decode(fp):
         data = json.load(json_data)
         print(data.keys())
         for images in data['images']:
-            for l in images['url']:
-                if url_check(l):
-                    download_images(l, images['imageId'])
-                    break
+            for url in images['url']:
+                # if url_check(l, images['imageId']):
+                urls.append(url)
+                imageIds.append(images['imageId'])
+                print(url, images['imageId'])
+                Thread(target=download_images, args=(url, images['imageId'])).start()
+            # download_images(l, images['imageId'])
+            # break
+            # else:
+            # continue
 
-    return 1
+    return urls, imageIds
 
 
 if __name__ == "__main__":
     print('in main class')
-    train_json_decode('data_json/train.data.json')
+    x, y = train_json_decode('data_json/train.data.json')
